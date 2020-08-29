@@ -3,8 +3,7 @@
 
 namespace rtc
 {
-    extern bool is_rtc_valid(false);
-    extern RtcData_t rtc_data = {0};
+    extern RtcMem rtc_memory{};
 
     /**
      * @brief  Calculates CRC from given data
@@ -13,7 +12,7 @@ namespace rtc
      * @param length - size of data, from which CRC code will be calculated
      * @return uint32_t with calculated crc code
      */
-    const uint32_t calculateCRC32(const uint8_t *data_ptr, size_t length) 
+    const uint32_t RtcMem::calculateCRC32(const uint8_t *data_ptr, size_t length) 
     {
         uint32_t crc = 0xffffffff;
         while(length--) 
@@ -44,13 +43,13 @@ namespace rtc
     /**
      * @brief  Reads Data Saved in RTC Memory and overwrites current temporary rtc_data structure
      */
-    void readMem()
+    void RtcMem::readMem()
     {
         #ifdef DEBUG
             Serial.println("Reading RTC MEMORY");
         #endif //DEBUG
 
-        bool is_rtc_valid = false;
+        is_rtc_valid = false;
 
         if(ESP.rtcUserMemoryRead(0, (uint32_t*) &rtc_data, sizeof(rtc_data))) 
         {
@@ -66,7 +65,7 @@ namespace rtc
      * @brief  Save rtc_data(Current settings) in RTC Memory
      * @return information if opeartion was done successfully
      */
-    const bool saveToMem()
+    const bool RtcMem::saveToMem()
     {
         #ifdef DEBUG
             Serial.println("Saving to RTC MEMORY");
@@ -85,7 +84,7 @@ namespace rtc
      * @param data - data that will be set as user last data in RTC Memory
      * @return information if opeartion was done successfully
      */
-    const bool saveToMemWithData(const uint32_t &data)
+    const bool RtcMem::saveToMemWithData(const rtc_mem_t &data)
     {
         rtc_data.last_data = data;
         return saveToMem();
@@ -96,7 +95,7 @@ namespace rtc
      * @param error_code - 
      * @return information if opeartion was done successfully
      */
-    void goDeepSleep(const RtcErrorCode &error_code, const uint64_t time_us)
+    void RtcMem::goDeepSleep(const RtcErrorCode &error_code, const uint64_t time_us)
     {
         #ifdef DEBUG
             Serial.print("Going to sleep: ");
@@ -104,7 +103,7 @@ namespace rtc
             Serial.println("us");
         #endif //DEBUG
 
-        rtc_data.last_error = static_cast<uint8_t>(error_code);
+        rtc_data.last_error = error_code;
         saveToMem();
         WiFi.forceSleepBegin();
         /*
@@ -118,115 +117,21 @@ namespace rtc
     }
 
     /**
-     * @brief  Get last saved data as uint32_t
-     * @note For now it is just unnecessary getter
-     * 
-     * @return RTC last data as uin32t_t
+     * @brief  Getter for RTC_Data_t struct
+     * @return read-only structure with RTC Data
      */
-    const uint32_t getLastDataAsUint32()
+    const RtcData_t RtcMem::getData() const
     {
-        return rtc_data.last_data;
+        return rtc_data;
     }
 
     /**
-     * @brief  Get last saved data in RTC Memory as float
-     * 
-     * @param  decimal_number - how many numbers will be moved to decimal part
-     * @param  is_positive - is positive or negative number
-     * @return RTC last data as Float
+     * @brief  Validation of RTC Data. This is used to make sure that Memory has been already and successfully read
+     * @return True if read RTC Memory is valid.
      */
-    const float getLastDataAsFloat(uint8_t decimal_number, bool is_positive)
+    const bool RtcMem::isValid() const
     {
-        float result = static_cast<float>(rtc_data.last_data);
-
-        while(decimal_number--)
-        {
-            result /= 10;
-        }
-
-        return is_positive ? result : -result;
+        return is_rtc_valid;
     }
 
-    /**
-     * @brief  Get last saved data in RTC Memory as double
-     * 
-     * @param  decimal_number - how many numbers will be moved to decimal part
-     * @param  is_positive - is positive or negative number
-     * @return RTC last data as Double
-     */
-    const double getLastDataAsDouble(uint16_t decimal_number, bool is_positive)
-    {
-        double result = static_cast<double>(rtc_data.last_data);
-
-        while(decimal_number--)
-        {
-            result /= 10;
-        }
-
-        return is_positive ? result : -result;
-    }
-
-    /**
-     * @brief  Converts float to uint32_t
-     * @note  This function will not work properly if float multiplied by 10^decimal_number will exceed uint32_t
-     *  For now has been left - propably whole function won't be needed
-     * @note because of uint32_t in rtc data, data will lose sign 
-     * 
-     * @param  data - data that will be converted
-     * @param  decimal_number - number of decimal places that will be saved
-     * @return rounded data as uint32_t
-     */
-    const uint32_t FloatToU32(float data, uint8_t decimal_number)
-    {
-        if(data < 0.0)
-        {
-            data *= -1;
-        }
-
-        while(decimal_number--)
-        {
-            data *= 10;
-        }
-
-        return static_cast<uint32_t>(data);
-    }
-
-    /**
-     * @brief  Converts Double to uint32_t
-     * @note  This function will not work properly if double multiplied by 10^decimal_number will exceed uint32_t
-     *  For now has been left - propably whole function won't be needed
-     * @note because of uint32_t in rtc data, data will lose sign (Will be fixed in future)
-     * 
-     * @param  data - data that will be converted
-     * @param  decimal_number - number of decimal places that will be saved
-     * @return rounded data as uint32_t
-     */
-    const uint32_t DoubleToU32(double data, uint16_t decimal_number)
-    {
-        if(data < 0.0)
-        {
-            data *= -1;
-        }
-
-        while(decimal_number--)
-        {
-            data *= 10;
-        }
-
-        return static_cast<uint32_t>(data);
-    }
-
-    /**
-     * @brief  Merge two uint16_t to uint32_t
-     * 
-     * @param  data1 - data that will be converted
-     * @param  data2 - second data to convert
-     * @return rounded data as uint32_t
-     */
-    const uint32_t U16x2ToU32(uint16_t data1, uint16_t data2)
-    {
-        uint32_t result(data1 << 16);
-        
-        return result |= data2;
-    }
 }//namespace rtc

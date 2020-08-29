@@ -2,6 +2,12 @@
 #include "MqttSender.hpp"
 #include "Rtc.hpp"
 
+/* SELECT DEVICE TYPE - UNCOMMENT Desired Type or #define somewhere 
+    If all are commented - device works on default type - double */
+
+// #define UINT_RTC 0
+// #define INT_RTC 0
+
 connection::MqttSender dev(2,"data");
 
 void setup() {
@@ -10,11 +16,11 @@ void setup() {
 
   if(!dev.connectWLAN())
   {
-    rtc::goDeepSleep(rtc::RtcErrorCode::NO_WIFI, 3e6);
+    rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::NO_WIFI, 3e6);
   }
   if(!dev.connectMqtt())
   {
-    rtc::goDeepSleep(rtc::RtcErrorCode::NO_MQTT, 3e6);
+    rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::NO_MQTT, 3e6);
   }
 
 
@@ -26,5 +32,5 @@ void loop() {
   // put your main code here, to run repeatedly:
   dev.sendMsg("Awaken");
 
-  rtc::goDeepSleep(static_cast<rtc::RtcErrorCode>(rtc::rtc_data.last_error), 3e6); //go deep sleep for 3 s
+  rtc::rtc_memory.goDeepSleep(static_cast<rtc::RtcErrorCode>(rtc::RtcErrorCode::NONE), 3e6); //go deep sleep for 3 s
 }

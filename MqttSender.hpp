@@ -11,6 +11,8 @@
 *(#define) WLAN_SSID, WLAN_PASS, IO_SERVER, IO_PORT, IO_USER, IO_KEY, IO_ERROR_FEED
 */
 
+
+
 namespace connection
 {
     enum class SignalCode : uint8_t;
@@ -21,12 +23,7 @@ namespace connection
     #ifdef ESP8266
     inline namespace Esp
     {
-        class MqttSender;
-
-        const IPAddress k_ip(IP_ADDR);
-        const IPAddress k_gateway(GATEWAY_ADDR);
-        const IPAddress k_subnet(SUBNET_ADDR);
-        
+        class MqttSender;      
     }// namespace Esp
     #endif //ESP8266
 }// namespace connection
@@ -50,20 +47,24 @@ public:
     static bool connectWLAN();
     static bool connectMqtt();
 
+    //TODO: Consider Also Tag naming which data type belongs to (Temperature, Humidity, etc.)
     const bool sendError(const SignalCode &err_code);
     const bool sendMsg(const std::string &msg, const std::string &additional_msg = ""); //TODO:Exit
 
-    const bool sendData(const uint32_t &data, const bool &save = true); 
     const bool sendData(const float &data,
                         uint8_t decimal_number,
                         const bool &save = true);
     const bool sendData(const double &data,
                         uint16_t decimal_number = 2,
                         const bool &save = true);
+    const bool sendData(const long long int &data, const bool &save = true); 
+    const bool sendData(const uint64_t &data, const bool &save = true); 
     const bool sendData(const int &data, const bool &save = true);
+    const bool sendData(const uint32_t &data, const bool &save = true); 
     const bool sendData(const uint16_t &data1,
-                        const uint16_t &data2, 
-                        const bool &save = true);
+                        const uint16_t &data2);
+
+    // static const std::string DoubleAsString
 
     //TODO: consider below functions (e.g to send Turn Off signal)
     const bool compareID(const uint8_t &device_id);

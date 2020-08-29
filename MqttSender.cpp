@@ -14,10 +14,10 @@ static const std::string feedToString(const std::string &feed_name);
 template <typename T>
 static std::string to_string(const T &data) //
 {
-    std::ostringstream out_stream ;
-    out_stream << data ;
+    std::ostringstream osstream ;
+    osstream << data ;
 
-    return out_stream.str() ;
+    return osstream.str() ;
 }
 
 namespace connection
@@ -39,7 +39,7 @@ namespace connection
     * 
     * @return true if connected
     */
-    bool MqttSender::connectWLAN()    //throw from class?
+    bool MqttSender::connectWLAN()
     {
         #ifdef DEBUG
             Serial.println("Connecting with Network");
@@ -56,7 +56,7 @@ namespace connection
         } //Avoiding issue when esp not always connect with WiFi
         delay(10);
         
-        if(!WiFi.config(k_ip, k_gateway, k_subnet))
+        if(!WiFi.config(IP_ADDR, GATEWAY_ADDR, SUBNET_ADDR))
         {
             return false;
         } //Static Ip Connection is much faster in ESP than DHCP
@@ -64,9 +64,17 @@ namespace connection
         // WiFi.setPhyMode(); //WIFI_PHY_MODE_11B: 802.11b mode - WIFI_PHY_MODE_11G: 802.11g mode - WIFI_PHY_MODE_11N: 802.11n mode
         // WiFi.setOutputPower(17.5);
 
+        if(rtc::rtc_memory.isValid())
+        {   
+            WiFi.begin(WLAN_SSID, WLAN_PASS, rtc::rtc_memory.getData().channel, rtc::rtc_memory.getData().bssid);
+        }
+        else
+        {
         
-        WiFi.begin(WLAN_SSID, WLAN_PASS);
+            WiFi.begin(WLAN_SSID, WLAN_PASS);
+        }
 
+        
         uint8_t retries(CONN_RETRIES);
 
         while ((WiFi.status() != WL_CONNECTED) && (retries--)) 
@@ -149,7 +157,7 @@ namespace connection
         
         if(!result)
         {
-            rtc::goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
+            rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
         }
 
         return result;
@@ -194,31 +202,12 @@ namespace connection
             Serial.println(msg.c_str());
             #endif //DEBUG
 
-            rtc::goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
+            rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
         }
 
         return false;
     }
 
-    /**
-    * @brief Publish Uin32_t data to MQTT Feed
-    * if failed - goes deep Sleep with proper ERROR
-    * @param data - data to publish
-    * @param save - if true - saves data to RTC Memory
-    * 
-    * @return true if published
-    */
-    const bool MqttSender::sendData(const uint32_t &data, const bool &save)
-    {
-        std::string msg = to_string(data) + "u32";
-
-        if(save)
-        {
-            rtc::rtc_data.last_data = data;
-        }
-        
-        return sendMsg(msg);
-    }
 
     /**
     * @brief Publish Float data to MQTT Feed
@@ -233,12 +222,11 @@ namespace connection
                                     uint8_t decimal_number,
                                     const bool &save)
     {
-        std::string msg = to_string(data) + 'f';    //By now send float as it is - maybe change in future
+        std::string msg = to_string(data) + "f_";    //By now send float as it is - maybe change in future
 
         if(save)
         {
-            rtc::rtc_data.last_data = rtc::FloatToU32(data, decimal_number);
-            // rtc::saveToMemWithData(rtc::FloatToU32(data, decimal_number))
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -257,11 +245,51 @@ namespace connection
                                     uint16_t decimal_number,
                                     const bool &save)
     {
-        std::string msg = to_string(data) + 'd';    //By now send double as it is - maybe change in future
+        std::string msg = to_string(data) + "d_";    //By now send double as it is - maybe change in future
 
         if(save)
         {
-            rtc::rtc_data.last_data = rtc::DoubleToU32(data, decimal_number);
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+        }
+        
+        return sendMsg(msg);
+    }
+
+/**
+    * @brief Publish Long Long data to MQTT Feed
+    * if failed - goes deep Sleep with proper ERROR
+    * @param data - data to publish
+    * @param save - if true - saves data to RTC Memory
+    * 
+    * @return true if published
+    */
+    const bool MqttSender::sendData(const long long int &data, const bool &save)
+    {
+        std::string msg = to_string(data) + "ll_";
+
+        if(save)
+        {
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+        }
+        
+        return sendMsg(msg);
+    }
+
+    /**
+    * @brief Publish Uint64_t data to MQTT Feed
+    * if failed - goes deep Sleep with proper ERROR
+    * @param data - data to publish
+    * @param save - if true - saves data to RTC Memory
+    * 
+    * @return true if published
+    */
+    const bool MqttSender::sendData(const uint64_t &data, const bool &save)
+    {
+        std::string msg = to_string(data) + "u64_";
+
+        if(save)
+        {
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -277,11 +305,31 @@ namespace connection
     */
     const bool MqttSender::sendData(const int &data, const bool &save)
     {
-        std::string msg = to_string(data) + "i";
+        std::string msg = to_string(data) + "i_";
 
         if(save)
         {
-            rtc::rtc_data.last_data = static_cast<uint32_t>(data);
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+        }
+        
+        return sendMsg(msg);
+    }
+
+    /**
+    * @brief Publish Uin32_t data to MQTT Feed
+    * if failed - goes deep Sleep with proper ERROR
+    * @param data - data to publish
+    * @param save - if true - saves data to RTC Memory
+    * 
+    * @return true if published
+    */
+    const bool MqttSender::sendData(const uint32_t &data, const bool &save)
+    {
+        std::string msg = to_string(data) + "u32_";
+
+        if(save)
+        {
+            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -291,19 +339,12 @@ namespace connection
     * @brief Publish Two Uint16_t data to MQTT Feed
     * if failed - goes deep Sleep with proper ERROR
     * @param data1 and data2 - data to publish
-    * @param save - if true - saves data to RTC Memory
     * 
     * @return true if published
     */
-    const bool MqttSender::sendData(const uint16_t &data1, const uint16_t &data2, const bool &save)
+    const bool MqttSender::sendData(const uint16_t &data1, const uint16_t &data2)
     {
-        std::string msg = to_string(data1) + '&' +  to_string(data2) + "u16";
-
-        if(save)
-        {
-            rtc::rtc_data.last_data = rtc::U16x2ToU32(data1, data2);
-        }
-        
+        std::string msg = to_string(data1) + '&' +  to_string(data2) + "u16_";
         return sendMsg(msg);
     }
 
