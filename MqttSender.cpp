@@ -37,56 +37,82 @@ namespace connection
     /**
     * @brief Starts connection with Network
     * 
-    * @return true if connected
+    * @note This function only begins connection - for checking if connected use MqttSender::checkWiFiConnection()
     */
-    bool MqttSender::connectWLAN()
+    void MqttSender::connectWiFi()
     {
         #ifdef DEBUG
             Serial.println("Connecting with Network");
         #endif// DEBUG
+        //Static Ip Connection is much faster in ESP than DHCP
 
-        WiFi.persistent(false); //Avoiding Unnecessary writing to Flash and issues connected with
-        WiFi.enableSTA(true);
-        delay(100);
-
-        WiFi.mode(WIFI_STA); //WiFi mode station (connect to wifi router only)
         if(!WiFi.forceSleepWake())
         {
             wifi_station_connect();
         } //Avoiding issue when esp not always connect with WiFi
-        delay(10);
-        
-        if(!WiFi.config(IP_ADDR, GATEWAY_ADDR, SUBNET_ADDR))
+        delay(1);
+
+        //1 and 3 have STA enabled - According to Wifi.waitForConnectResult()
+        if((wifi_get_opmode() & 1) == 0) 
         {
-            return false;
-        } //Static Ip Connection is much faster in ESP than DHCP
+            WiFi.enableSTA(true);
+            delay(10);
+        }
+
+        WiFi.mode(WIFI_STA);
+        
+        WiFi.persistent(false);
         // WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
         // WiFi.setPhyMode(); //WIFI_PHY_MODE_11B: 802.11b mode - WIFI_PHY_MODE_11G: 802.11g mode - WIFI_PHY_MODE_11N: 802.11n mode
         // WiFi.setOutputPower(17.5);
 
-        if(rtc::rtc_memory.isValid())
-        {   
-            WiFi.begin(WLAN_SSID, WLAN_PASS, rtc::rtc_memory.getData().channel, rtc::rtc_memory.getData().bssid);
-        }
-        else
+        IPAddress ip(IP_ADDR), gateway(GATEWAY_ADDR), subnet(SUBNET_ADDR);
+        WiFi.config(ip, gateway, subnet);
+
+        if(rtc::rtc_memory.isValid())             
         {
-        
+            // The RTC data was good, make a quick connection
+            Serial.println("RTC");
+            auto rtc_data = rtc::rtc_memory.getData();
+
+            WiFi.begin(WLAN_SSID, WLAN_PASS, rtc_data.channel, rtc_data.bssid, true);
+        }
+        else 
+        {
+            // The RTC data was not valid, so make a regular connection
             WiFi.begin(WLAN_SSID, WLAN_PASS);
         }
+    }
 
-        
-        uint8_t retries(CONN_RETRIES);
-
-        while ((WiFi.status() != WL_CONNECTED) && (retries--)) 
+    bool MqttSender::checkWiFiConnection()
+    {
+        uint16_t retries(15u);
+        while(WiFi.status() != WL_CONNECTED && retries--)
         {
-            delay(100);
-
+            yield();
+            delay(50);
+        }
+        if(WiFi.status() == WL_CONNECTED)
+        {
             #ifdef DEBUG
-                Serial.print(".");
+                Serial.println("Fast Conn");
             #endif// DEBUG
+            return true;
         }
 
-        return WiFi.status() == WL_CONNECTED;
+        #ifdef DEBUG
+            Serial.println("Fast Connect Failed - Try normal");
+        #endif// DEBUG
+
+        WiFi.disconnect();
+        delay(10);
+        WiFi.forceSleepBegin();
+        delay(10);
+        WiFi.forceSleepWake();
+        delay(10);
+        WiFi.begin(WLAN_SSID, WLAN_PASS);
+        
+        return WiFi.waitForConnectResult(6000) == WL_CONNECTED;
     }
 
     /**

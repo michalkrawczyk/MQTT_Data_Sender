@@ -105,15 +105,13 @@ namespace rtc
 
         rtc_data.last_error = error_code;
         saveToMem();
-        WiFi.forceSleepBegin();
-        /*
-        WiFi.disconnect( true );
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
         WiFi.forceSleepBegin();
         delay(1);
-        ESP.deepSleep( time_us, WAKE_RF_DISABLED ); 
-        */ //That option should be more power saving. Unfortunately it took too much time in NodeMCU to reconnect after use that
-        // ESP.deepSleep(time_us);
-        ESP.deepSleep(time_us, RF_NO_CAL);
+        // ESP.deepSleep( time_us, WAKE_RF_DISABLED );  //That option should be more power saving. Unfortunately it took too much time in NodeMCU to reconnect after use that
+        
+        ESP.deepSleep(time_us, WAKE_NO_RFCAL);
     }
 
     /**

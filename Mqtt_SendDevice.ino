@@ -14,7 +14,8 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  if(!dev.connectWLAN())
+  dev.connectWiFi();
+  if(!dev.checkWiFiConnection())
   {
     rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::NO_WIFI, 3e6);
   }

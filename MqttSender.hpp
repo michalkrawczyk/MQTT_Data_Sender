@@ -44,7 +44,8 @@ class connection::MqttSender final
 {
 public:
     explicit MqttSender(const uint8_t &device_id, const std::string &feed_name);
-    static bool connectWLAN();
+    static void connectWiFi();
+    static bool checkWiFiConnection();
     static bool connectMqtt();
 
     //TODO: Consider Also Tag naming which data type belongs to (Temperature, Humidity, etc.)
