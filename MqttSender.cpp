@@ -26,7 +26,7 @@ namespace connection
 
     extern WiFiClient client{};
     extern Adafruit_MQTT_Client mqtt{&client, IO_SERVER, IO_PORT, IO_USER, IO_KEY};
-
+    
     MqttSender::MqttSender(const uint8_t &device_id, const std::string &feed_name):
     _k_dev_id(device_id),
     _feed(feedToString(feed_name))
@@ -37,7 +37,7 @@ namespace connection
     /**
     * @brief Starts connection with Network
     * 
-    * @note This function only begins connection - for checking if connected use MqttSender::checkWiFiConnection()
+    * @note This function only begins connection - for checking if connected use MqttSender::checkWiFiConn()
     */
     void MqttSender::connectWiFi()
     {
@@ -69,11 +69,11 @@ namespace connection
         IPAddress ip(IP_ADDR), gateway(GATEWAY_ADDR), subnet(SUBNET_ADDR);
         WiFi.config(ip, gateway, subnet);
 
-        if(rtc::rtc_memory.isValid())             
+        if(RTC.isValid())             
         {
             // The RTC data was good, make a quick connection
             Serial.println("RTC");
-            auto rtc_data = rtc::rtc_memory.getData();
+            auto rtc_data = RTC.getData();
 
             WiFi.begin(WLAN_SSID, WLAN_PASS, rtc_data.channel, rtc_data.bssid, true);
         }
@@ -84,7 +84,12 @@ namespace connection
         }
     }
 
-    bool MqttSender::checkWiFiConnection()
+    /**
+    * @brief Check if connected to WiFi. If not - restarts radio and WiFi and tries again
+    * 
+    * @return if status == WL_CONNECTED <- means that is connected
+    */
+    bool MqttSender::checkWiFiConn()
     {
         uint16_t retries(15u);
         while(WiFi.status() != WL_CONNECTED && retries--)
@@ -183,7 +188,7 @@ namespace connection
         
         if(!result)
         {
-            rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
+            RTC.deepSleepErr(rtc::ErrorCode::MQTT_PUB_FAIL);
         }
 
         return result;
@@ -228,7 +233,7 @@ namespace connection
             Serial.println(msg.c_str());
             #endif //DEBUG
 
-            rtc::rtc_memory.goDeepSleep(rtc::RtcErrorCode::MQTT_PUB_FAIL);
+            RTC.deepSleepErr(rtc::ErrorCode::MQTT_PUB_FAIL);
         }
 
         return false;
@@ -252,7 +257,7 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -275,13 +280,13 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
     }
 
-/**
+    /**
     * @brief Publish Long Long data to MQTT Feed
     * if failed - goes deep Sleep with proper ERROR
     * @param data - data to publish
@@ -295,7 +300,7 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -315,7 +320,7 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -335,7 +340,7 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -355,7 +360,7 @@ namespace connection
 
         if(save)
         {
-            rtc::rtc_memory.saveToMemWithData((static_cast<rtc_mem_t>(data)));
+            RTC.saveToMemData((static_cast<RTC_mem_t>(data)));
         }
         
         return sendMsg(msg);
@@ -386,10 +391,10 @@ namespace connection
         return _k_dev_id == device_id;
     }
 
-    void checkForCommands()
-    {
-        //TODO: Implement if decide that part is needed
-    }
+    // void checkForCommands()
+    // {
+    //     //TODO: Implement if decide that part is needed
+    // }
     #endif //ESP8266
 
 }//namespace connection

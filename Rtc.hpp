@@ -10,33 +10,34 @@
 
 namespace rtc
 {
-    enum class RtcErrorCode : uint8_t;
+    enum class ErrorCode : uint8_t;
     struct RtcData_t;
 
     class RtcMem;
-    extern RtcMem rtc_memory;
 }//namespace rtc
+
 
 struct rtc::RtcData_t
 {
     uint32_t crc32;                         // 4 bytes
     uint8_t channel;                        // 1 byte
     uint8_t bssid[6];                       // 6 bytes
-    rtc::RtcErrorCode last_error;           // 1 byte
-    rtc_mem_t last_data;                    // 8 bytes
+    ErrorCode last_error;                    // 1 byte
+    RTC_mem_t last_data;                    // 8 bytes
 };  //total 20 bytes
 //RTC Memory for user data is 512 bytes long
 
 class rtc::RtcMem final
 {
 public:
-    static const uint32_t calculateCRC32(const uint8_t *data_ptr, size_t length);
+    static const uint32_t calcCRC32(const uint8_t *data_ptr, size_t length);
 
     void readMem();
     const bool saveToMem();
-    const bool saveToMemWithData(const rtc_mem_t &data = 0);
+    const bool saveToMemData(const RTC_mem_t &data = 0);
 
-    void goDeepSleep(const RtcErrorCode &error_code, const uint64_t time_us = 1000000UL);
+    void deepSleepErr(const ErrorCode &error_code, const uint64_t time_us = 10000000UL);
+    void deepSleep(const uint64_t time_us = 10000000UL);
 
     const RtcData_t getData() const;
     const bool isValid() const;
@@ -47,7 +48,7 @@ private:
 
 };
 
-enum class rtc::RtcErrorCode: uint8_t
+enum class rtc::ErrorCode: uint8_t
 {
     NONE,
     NO_WIFI,
@@ -59,6 +60,6 @@ enum class rtc::RtcErrorCode: uint8_t
 };
 
 
-
+extern rtc::RtcMem RTC;
 
 #endif // RTC_HPP

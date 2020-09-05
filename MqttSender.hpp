@@ -45,7 +45,7 @@ class connection::MqttSender final
 public:
     explicit MqttSender(const uint8_t &device_id, const std::string &feed_name);
     static void connectWiFi();
-    static bool checkWiFiConnection();
+    static bool checkWiFiConn();
     static bool connectMqtt();
 
     //TODO: Consider Also Tag naming which data type belongs to (Temperature, Humidity, etc.)
@@ -69,7 +69,7 @@ public:
 
     //TODO: consider below functions (e.g to send Turn Off signal)
     const bool compareID(const uint8_t &device_id);
-    void checkForCommands();
+    // void checkForCommands();
     //bool retainConn();
 
 private:
